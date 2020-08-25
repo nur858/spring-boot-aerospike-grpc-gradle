@@ -1,0 +1,93 @@
+plugins {
+	id 'org.springframework.boot' version '2.3.3.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+	id 'org.asciidoctor.convert' version '1.5.8'
+	id 'java'
+	id 'com.google.protobuf' version '0.8.12'
+}
+sourceSets {
+	main{
+		java {
+			srcDir 'src/main/protoGen'
+		}
+	}
+}
+
+protobuf {
+	protoc {
+		artifact = "com.google.protobuf:protoc:3.2.0"
+	}
+	plugins{
+		grpc {
+			artifact = 'io.grpc:protoc-gen-grpc-java:1.4.0'
+		}
+	}
+	generateProtoTasks {
+		ofSourceSet('main').each { task ->
+			task.builtins {
+				java {
+					outputSubDir = 'protoGen'
+				}
+			}
+			task.plugins {
+				grpc {
+					outputSubDir = 'protoGen'
+				}
+			}
+		}
+	}
+	generatedFilesBaseDir = "$projectDir/src/"
+}
+
+task cleanProtoGen {
+	doFirst {
+		delete("$projectDir/src/main/protoGen")
+	}
+}
+clean.dependsOn cleanProtoGen
+
+group = 'com.nur'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('snippetsDir', file("build/generated-snippets"))
+}
+
+dependencies {
+	implementation 'org.springframework.data:spring-data-commons'
+	implementation 'com.aerospike:spring-data-aerospike:2.4.0.RELEASE'
+
+	implementation 'io.github.lognet:grpc-spring-boot-starter:3.5.6'
+
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+	testImplementation 'org.springframework.security:spring-security-test'
+}
+
+test {
+	outputs.dir snippetsDir
+	useJUnitPlatform()
+}
+
+asciidoctor {
+	inputs.dir snippetsDir
+	dependsOn test
+}
